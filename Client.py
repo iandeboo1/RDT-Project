@@ -17,32 +17,35 @@ if __name__ == '__main__':
 	
 	timeout = 2  # send the next message if no response
 	time_of_last_data = time.time()
-	isACKed = 0
 	
 	rdt = RDT.RDT('client', args.server, args.port)
 	for msg_S in msg_L:
 		print('Converting: ' + msg_S)
-		rdt.rdt_2_1_send(msg_S, isACKed)
+		rdt.rdt_3_0_send(msg_S, 0)
 		
 		# try to receive message before timeout
 		ret_S = None
 		while ret_S is None or ret_S == 0:
-			ret_S = rdt.rdt_2_1_receive()
+			ret_S = rdt.rdt_3_0_receive()
 			if ret_S is None:
 				if time_of_last_data + timeout < time.time():
-					break
+					# resent lost packet
+					print("\nPacket lost, resending message: " + msg_S)
+					rdt.rdt_3_0_send(msg_S, 0)
+					# reset timeout
+					time_of_last_data = time.time()
+					continue
 				else:
 					continue
 			elif ret_S == 0:
-				# print("\nResending message: " + msg_S)
-				rdt.rdt_2_1_send(msg_S, 0)
+				print("\nPacket corrupted, resending message: " + msg_S)
+				rdt.rdt_3_0_send(msg_S, 0)
 				# reset timeout after receiving a corrupted response
 				time_of_last_data = time.time()
 				ret_S = None
 
 		# reset timeout after receiving a response
 		time_of_last_data = time.time()
-		isACKed = 1
 		# print the result
 		if ret_S:
 			print('TO \n' + ret_S + '\n')
