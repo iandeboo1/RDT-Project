@@ -70,20 +70,31 @@ class RDT:
 	role_S = ''
 
 	def __init__(self, role_S, server_S, port):
-		self.network = Network.NetworkLayer(role_S, server_S, port)
+		# use the passed in port and port+1 to set up unidirectional links between
+		# RDT send and receive functions
+		# cross the ports on the client and server to match net_snd to net_rcv
+		if role_S == 'server':
+			self.net_snd = Network.NetworkLayer(role_S, server_S, port)
+			self.net_rcv = Network.NetworkLayer(role_S, server_S, port + 1)
+		else:
+			self.net_rcv = Network.NetworkLayer(role_S, server_S, port)
+			self.net_snd = Network.NetworkLayer(role_S, server_S, port + 1)
 		self.role_S = role_S
 
 	def disconnect(self):
-		self.network.disconnect()
+		self.net_snd.disconnect()
+		self.net_rcv.disconnect()
 
 	def rdt_1_0_send(self, msg_S):
 		p = Packet(self.seq_num, msg_S)
 		self.seq_num += 1
-		self.network.udt_send(p.get_byte_S())
+		# !!! make sure to use net_snd link to udt_send and udt_receive in the RDT send function
+		self.net_snd.udt_send(p.get_byte_S())
 
 	def rdt_1_0_receive(self):
 		ret_S = None
-		byte_S = self.network.udt_receive()
+		# !!! make sure to use net_rcv link to udt_send and udt_receive the in RDT receive function
+		byte_S = self.net_rcv.udt_receive()
 		self.byte_buffer += byte_S
 		# keep extracting packets - if reordered, could get more than one
 		while True:
@@ -103,11 +114,11 @@ class RDT:
 
 	def rdt_2_1_send(self, msg_S, is_ACK):
 		p = Packet(self.seq_num, msg_S, is_ACK)
-		self.network.udt_send(p.get_byte_S())
+		self.net_snd.udt_send(p.get_byte_S())
 
 	def rdt_2_1_receive(self):
 		ret_S = None
-		byte_S = self.network.udt_receive()
+		byte_S = self.net_rcv.udt_receive()
 		self.byte_buffer += byte_S
 		# keep extracting packets - if reordered, could get more than one
 		while True:
@@ -126,8 +137,8 @@ class RDT:
 					print("\nResponse packet corrupted!")
 					return 0
 				else:
-					# packet is NAK
 					if p.is_ACK == 0:
+						# packet is NAK
 						print("\nRecognized NAK!")
 						self.byte_buffer = self.byte_buffer[length:]
 						return 0
@@ -163,11 +174,11 @@ class RDT:
 
 	def rdt_3_0_send(self, msg_S, is_ACK):
 		p = Packet(self.seq_num, msg_S, is_ACK)
-		self.network.udt_send(p.get_byte_S())
+		self.net_snd.udt_send(p.get_byte_S())
 
 	def rdt_3_0_receive(self):
 		ret_S = None
-		byte_S = self.network.udt_receive()
+		byte_S = self.net_rcv.udt_receive()
 		self.byte_buffer += byte_S
 		# keep extracting packets - if reordered, could get more than one
 		while True:
