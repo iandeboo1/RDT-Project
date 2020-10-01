@@ -148,7 +148,6 @@ class RDT:
 				p = Packet.from_byte_S(self.byte_buffer[0:length])
 				if p is None:  # packet is corrupt
 					self.byte_buffer = self.byte_buffer[length:]
-					print("\nPacket corrupted, sending NAK!")
 					return 0
 				else:
 					if p.is_ACK == 1:
